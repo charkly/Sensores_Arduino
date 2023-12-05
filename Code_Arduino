@@ -1,0 +1,76 @@
+#include <Servo.h> //Permite controlar servomotores
+#include <DHT11.h> //Para el sensor de temperatura
+
+
+int PinIN1 = 7;
+int PinIN2 = 6;
+DHT11 dht11(9);
+
+void setup (){
+Serial.begin(9600);
+// configuramos los pines como salida
+pinMode(8, OUTPUT);
+pinMode(PinIN1, OUTPUT);
+pinMode(PinIN2, OUTPUT);
+}
+
+void loop (){
+ if (Serial. available()>0){
+  char c = Serial.read();
+
+  if (c=='1'){
+    digitalWrite(8,HIGH);
+    }
+    else if (c=='2'){
+      digitalWrite(8,LOW);
+    }
+    else if (c=='3'){
+      MotorHorario();
+      Serial.println("Giro del Motor en sentido horario");
+    }
+    else if(c=='4'){
+      MotorStop();
+      Serial.println("Motor Detenido");
+    }
+    else if(c=='5'){
+      LeerTemp();
+      Serial.println("Leyendo temperatura");
+    }
+ }
+
+}
+
+void MotorHorario()
+{
+  digitalWrite (PinIN1, HIGH);
+  digitalWrite (PinIN2, LOW);
+}
+
+void MotorStop()
+{
+  digitalWrite (PinIN1, LOW);
+  digitalWrite (PinIN2, LOW);
+}
+
+void MotorHorario()
+void MotorStop()
+void LeerTemp()
+{
+  // Leer la temperatura desde el sensor
+  float temperatura = dht11.readTemperature();
+
+  // Si las lecturas de temperatura y humedad fueron un éxito, se imprimen en la comunicación serial
+  if(temperatura!=-1)
+  {
+    Serial.print("Temperatura:");
+    Serial.print(temperatura);
+    Serial.println(" C");
+  }
+  else
+  {
+    //Si la lectura de la temperatura o la humedad falla, imprimir un mensaje de error
+    Serial.println("Error de lectura de datos");
+  }
+   // Esperar  segundos antes de la siguiente lectura
+  delay(1000);
+}
