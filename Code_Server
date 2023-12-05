@@ -163,12 +163,9 @@ class Comunicacion_Socket(tk.Frame):
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             s.bind((self.HOST, self.PORT))
             s.listen()
-            print("aqui llegue")
             print(self.stop_thread)
             while self.stop_thread:
-                print("Dentro del while")
                 try:
-                    print("Entre al try")
                     conn, addr = s.accept()
                     print(conn)
                     print(addr)
