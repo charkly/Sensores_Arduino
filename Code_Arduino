@@ -1,4 +1,4 @@
-#include <Servo.h> //Permite controlar servomotores
+#include <Servo.h> //Libreria principal para todos los programas
 #include <DHT11.h> //Para el sensor de temperatura
 
 
