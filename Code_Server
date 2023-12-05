@@ -1,0 +1,235 @@
+# Comunicacin con socket en Python
+
+# Importaci de libreras
+import socket
+import threading
+import matplotlib.pyplot as plt
+import tkinter as tk
+from tkinter import messagebox
+from tkinter import ttk
+from tkinter.messagebox import showinfo
+import serial
+
+# Definici de clase Comunicacion_Socket
+class Comunicacion_Socket(tk.Frame):
+
+    def __init__(self, parent, *args, **kwargs):
+
+        super().__init__(parent, *args, **kwargs)
+        
+        print(socket.gethostbyname(socket.gethostname()))
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    
+
+        # Obtener direcci IP y establecer puerto para comunicaci
+        self.HOST = socket.gethostname
+        self.PORT = 65123 
+
+        # Variable para modo comunicaci (cliente o servidor)
+        self.modo_comunicacion = tk.StringVar(value="client")
+        
+        # Definici tema a usar en Tkinter y para el frame
+        plt.style.use('ggplot')
+        # Instanciar el frame para la aplicacin Cliente-Servidor
+        self.frame_ClSIP = tk.Frame(self, bg="#0A2229")
+
+        # Etiqueta y Checkbuttons para seleccionar si es cliente o servidor
+        self.cliente_servidor = tk.Label(self.frame_ClSIP, text="SERVIDOR ONLINE", font=("Calibri",15,"bold"))
+        self.cliente_servidor.grid(row=0,column=10,columnspan=15,padx=100,pady=16)
+
+        
+        # Etiqueta para escribir "Selecci de IP"
+        label_result = tk.Label(self.frame_ClSIP, text="IP del Servidor: ", font=("Calibri",13,"bold"))
+        label_result.grid(row=5,column=18,columnspan=30,padx=100,pady=16)
+
+        # Direcciones IP disponibles para la comunicacion
+        direcciones_ip = ["192.168.100.6"]
+        # Se crea un widget de cuadro combinado con las valores de direcciones_ip
+        self.combo_direccionesip = ttk.Combobox(self.frame_ClSIP, values=direcciones_ip)
+        self.combo_direccionesip.grid(row=6,column=18,columnspan=30,padx=100,pady=16)
+        #Cuando cambia un valor de seleccin, el widget de cuadro combinado genera un evento virtual. 
+        # Para manejar el evento se usa el metodo bind() de la siguiente manera:'<<ComboboxSelected>>'
+        self.combo_direccionesip.bind("<<ComboboxSelected>>", self.ip_seleccionada)
+
+        # Botn para iniciar la comunicacin 
+        self.inicio_comunicacion = tk.Button(
+            self.frame_ClSIP, bg="#A9A9A9", fg="#0000CD",
+            activebackground="#000000", font=('Calibri', 16, "bold"),
+            text="ESCUCHAR", command=self.iniciar_servidor,
+            borderwidth=4, relief="raised",
+            activeforeground="#3BDE73"
+        )
+        self.inicio_comunicacion.grid(row=7,column=18,columnspan=30,padx=15,pady=8)
+       
+
+        # Etiqueta para mostrar "Mensaje Recibido" y agregar el mensaje recibido por el servidor
+        self.etiqueta_mensaje_recibido = tk.Label(self.frame_ClSIP, text="Mensaje Recibido: ", font=("Calibri",13,"bold"))
+        self.etiqueta_mensaje_recibido.grid(row=10,column=18,columnspan=30,padx=15,pady=8)
+
+        # Botn para desconectar y cerrar
+        self.desconectar_cerrar = tk.Button(
+            self.frame_ClSIP, bg="#A9A9A9", fg="#0000CD",
+            activebackground="#000000", font=('Calibri', 16, "bold"),
+            text="DESCONECTAR Y CERRAR", command=self.stop_server_thread,
+            borderwidth=4, relief="raised",
+            activeforeground="#3BDE73"
+        )
+        self.desconectar_cerrar.grid(row=11,column=18,columnspan=30,padx=15,pady=8)
+
+        self.frame_ClSIP.pack(fill="x")
+        
+         # Variable para detener el hilo cuando se cierra la ventana
+        self.stop_thread = True
+
+    # Funcin para mostrar la Direccin IP Seleccionada
+    def ip_seleccionada(self, event):
+        seleccion_ip = self.combo_direccionesip.get()
+        if seleccion_ip is not None and seleccion_ip != "":
+            self.HOST = seleccion_ip
+        showinfo(title='DIRECCIN IP',message=f'Direccin IP Seleccionada: {self.combo_direccionesip.get()}')
+
+    # Funcin para obtener el modo Cliente o modo Servidor
+    def modo_cliente_servidor(self):
+        if self.modo_comunicacion.get() == "client":
+            self.inicio_comunicacion.config(text="Conectar", command=self.iniciar_cliente)
+            self.etiqueta_mensaje.grid(row=2,column=18,columnspan=20,padx=15,pady=8)
+            self.mensaje_enviar.grid(row=3,column=18,columnspan=30,padx=15,pady=8)
+        else:
+            self.inicio_comunicacion.config(text="Escuchar", command=self.iniciar_servidor)
+            self.etiqueta_mensaje.grid_forget()
+            self.mensaje_enviar.grid_forget()
+
+    # Funcin para iniciar el Servidor
+    def iniciar_servidor(self):
+        if self.combo_direccionesip.get() == "":
+            messagebox.showinfo("ATENCIN", "Debe seleccionar una Direccin IP")
+            return
+        # Inicia el hilo para el servidor
+        server_thread = threading.Thread(target=self.conectar_servidor)
+        if self.inicio_comunicacion["text"] == "Escuchar":
+            self.stop_thread = True
+            server_thread.start()
+            self.inicio_comunicacion.configure(text="Detener")
+        else:
+            self.inicio_comunicacion.configure(text="Escuchar")
+            self.stop_thread = False
+
+    # Funcin para iniciar el Cliente
+    def iniciar_cliente(self):
+        text_message = self.mensaje_enviar.get()
+        if text_message == None or text_message == "":
+            messagebox.showinfo("ATENCIN!!", "Escribir un mensaje para enviar")
+            
+                
+
+        if self.combo_direccionesip.get() == "":
+            messagebox.showinfo("ATENCIN!!!", "Seleccionar una Direccin IP")
+            return
+        
+        # Inicia el hilo para el cliente
+        server_thread = threading.Thread(target=self.conectar_cliente)
+        if self.inicio_comunicacion["text"] == "Conectar":
+            self.stop_thread = True
+            server_thread.start()
+            self.inicio_comunicacion.configure(text="Detener")
+        else:
+            self.inicio_comunicacion.configure(text="Conectar")
+            self.stop_thread = False
+    
+
+    # Funcin para parar el hilo y cerrar la ventana principal del programa
+    def stop_server_thread(self):
+        self.stop_thread = False
+        ventana_principal.destroy()
+        exit()
+
+    # Funcin para que el Cliente empiece a enviar mensajes
+    def conectar_cliente(self):
+        text_message = self.mensaje_enviar.get()
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((self.HOST, self.PORT))
+            s.sendall(bytes(text_message, encoding = "utf-8"))
+            data = s.recv(1024)
+
+            print("Recibida", repr(data))
+            message = data.decode()
+            self.pantalla_mensaje_enviado.config(text=message)
+            #self.pantalla_mensaje_enviado.config(text=text_message)
+
+    # Funcin para que el Servidor empiece a escuchar
+    def conectar_servidor(self):
+        messagebox.showinfo("Servidor Conectado",self.HOST)
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            s.bind((self.HOST, self.PORT))
+            s.listen()
+            print("aqui llegue")
+            print(self.stop_thread)
+            while self.stop_thread:
+                print("Dentro del while")
+                try:
+                    print("Entre al try")
+                    conn, addr = s.accept()
+                    print(conn)
+                    print(addr)
+                    with conn:
+                        print(f"Connected by {addr}")
+                        while self.stop_thread:
+                            data = conn.recv(1024)
+                            if not data:
+                                break
+                            #conn.sendall(data)
+                            conn.sendall(bytes(data))
+ 
+                            message_received = "Mensaje recibido: "+ data.decode() 
+                            
+                            if data.decode() == "1":
+                              print("Encender LED")
+                              si.write("1".encode())
+                             
+                            if data.decode()== "2":
+                                print("Apagar LED")
+                                si.write("2".encode())
+                                
+                            if data.decode()== "3":
+                                print("Encender Motor")
+                                si.write("3".encode())
+                                
+                            if data.decode()== "4":
+                                print("Apagar Motor")
+                                si.write("4".encode())
+                                
+                            if data.decode()== "5":
+                                print("Leer Temperatura")
+                                si.write("5".encode())
+
+                                
+
+                            self.etiqueta_mensaje_recibido.config(text=message_received)
+                except OSError as e:
+                    # Puede ocurrir cuando se cierra la ventana y el socket se cierra abruptamente
+                    if self.stop_thread:
+                        print("Error de conexin:", e)
+                    break
+                
+
+
+si = serial.Serial('COM3',9600) 
+
+
+
+
+if __name__ == "__main__":
+    # Se crea la ventana principal
+    ventana_principal = tk.Tk()
+    ventana_principal.title("Monitoreo Al Cliente")
+  
+    # Se crea un objeto de la clase Comunicacion_Socket y se agrega a la ventana principal
+    comunicacion = Comunicacion_Socket(ventana_principal)
+    comunicacion.pack(side="right", fill="both", expand="false")
+
+    # Se llama a la funcin protocol para cierre de la ventana y para detener el hilo
+    ventana_principal.protocol("WM_DELETE_WINDOW", comunicacion.stop_server_thread)
+    
+    # Se inicia la ventana principal
+    ventana_principal.mainloop() 
