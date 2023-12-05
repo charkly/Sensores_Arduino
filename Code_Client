@@ -1,0 +1,162 @@
+# Importación de librerías
+import socket
+import threading
+import tkinter as tk
+from tkinter import messagebox
+from tkinter import ttk
+from tkinter.messagebox import showinfo
+
+# Definición de clase Comunicacion_Socket
+class Comunicacion_Socket(tk.Frame):
+ 
+    def _init_(self, parent, *args, **kwargs):
+
+        super()._init_(parent, *args, **kwargs)
+        
+        print(socket.gethostbyname(socket.gethostname()))
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+       
+        # Obtener dirección IP y establecer puerto para comunicación
+        self.HOST = socket.gethostname
+        self.PORT = 65123
+
+        # Variable para modo comunicación (cliente o servidor)
+        self.modo_comunicacion = tk.StringVar(value="client")
+            
+        # Instanciar el frame para la aplicación Cliente-Servidor
+        self.frame_ClSIP = tk.Frame(self, bg="#7FFFD4")
+
+        # Botón para seleccionar si es Cliente
+        self.check_cliente = tk.Checkbutton(
+            self.frame_ClSIP, text="Cliente", variable=self.modo_comunicacion, onvalue="client",
+            command=self.modo_cliente_servidor
+        )
+        self.check_cliente.grid(row=1,column=10,columnspan=15,padx=50,pady=8)
+        self.check_cliente.deselect()
+        
+        # Etiqueta para poner "Escribir mensaje a enviar"
+        self.etiqueta_mensaje = tk.Label(self.frame_ClSIP, text="Escribir mensaje a enviar: ", font=("Calibri",13,"bold"))
+        self.etiqueta_mensaje.grid(row=2,column=18,columnspan=20,padx=15,pady=8)
+        self.etiqueta_mensaje.grid_forget()
+
+        # Caja de texto para escribir del lado del cliente el mensaje a enviar
+        self.mensaje_enviar = tk.Entry(self.frame_ClSIP, width=60)
+        self.mensaje_enviar.grid(row=3,column=18,columnspan=30,padx=15,pady=8)
+        self.mensaje_enviar.grid_forget()
+        
+        # Etiqueta para escribir "Selección de IP"
+        label_result = tk.Label(self.frame_ClSIP, text="Selección de IP: ", font=("Calibri",13,"bold"))
+        label_result.grid(row=5,column=18,columnspan=30,padx=15,pady=8)
+
+        # Direcciones IP disponibles para la comunicación
+        direcciones_ip = ["192.168.100.6"]
+        # Se crea un widget de cuadro combinado con las valores de direcciones_ip
+        self.combo_direccionesip = ttk.Combobox(self.frame_ClSIP, values=direcciones_ip)
+        self.combo_direccionesip.grid(row=6,column=18,columnspan=30,padx=15,pady=8)
+        #Cuando cambia un valor de selección, el widget de cuadro combinado genera un evento virtual. 
+        # Para manejar el evento se usa el método bind() de la siguiente manera:'<<ComboboxSelected>>'
+        self.combo_direccionesip.bind("<<ComboboxSelected>>", self.ip_seleccionada)
+
+        # Botón para iniciar la comunicación 
+        self.inicio_comunicacion = tk.Button(
+            self.frame_ClSIP, bg="#A9A9A9", fg="#0000CD",
+            activebackground="#000000", font=('Calibri', 16, "bold"),
+            text="CONEXION", command=self.iniciar_cliente,
+            borderwidth=4, relief="raised",
+            activeforeground="#3BDE73"
+        )
+        self.inicio_comunicacion.grid(row=7,column=18,columnspan=30,padx=15,pady=8)
+
+        # Etiqueta para mostrar "Mensaje Enviado"
+        self.etiqueta_mensaje_enviado = tk.Label(self.frame_ClSIP, text="Mensaje Enviado: ", font=("Calibri",13,"bold"))
+        self.etiqueta_mensaje_enviado.grid(row=8,column=18,columnspan=30,padx=15,pady=8)
+        # Etiqueta para mostrar el Mensaje Enviado
+        self.pantalla_mensaje_enviado = tk.Label(self.frame_ClSIP, width=30,height=3,font=("Helvetica",15))
+        self.pantalla_mensaje_enviado.grid(row=9,column=18,columnspan=30,padx=15,pady=8)
+
+        # Botón para desconectar y cerrar
+        self.desconectar_cerrar = tk.Button(
+            self.frame_ClSIP, bg="#A9A9A9", fg="#0000CD",
+            activebackground="#000000", font=('Calibri', 16, "bold"),
+            text="DESCONECTAR Y CERRAR", command=self.stop_server_thread,
+            borderwidth=4, relief="raised",
+            activeforeground="#3BDE73"
+        ) 
+        self.desconectar_cerrar.grid(row=11,column=18,columnspan=30,padx=15,pady=8)
+
+        self.frame_ClSIP.pack(fill="x")
+        
+         # Variable para detener el hilo cuando se cierra la ventana
+        self.stop_thread = True
+
+    # Función para mostrar la Dirección IP Seleccionada
+    def ip_seleccionada(self, event):
+        seleccion_ip = self.combo_direccionesip.get()
+        if seleccion_ip is not None and seleccion_ip != "":
+            self.HOST = seleccion_ip
+        showinfo(title='DIRECCIÓN IP',message=f'Dirección IP Seleccionada: {self.combo_direccionesip.get()}')
+
+    # Función para obtener el modo Cliente o modo Servidor
+    def modo_cliente_servidor(self):
+        if self.modo_comunicacion.get() == "client":
+            self.inicio_comunicacion.config(text="CONEXION", command=self.iniciar_cliente)
+            self.etiqueta_mensaje.grid(row=2,column=18,columnspan=20,padx=15,pady=8)
+            self.mensaje_enviar.grid(row=3,column=18,columnspan=30,padx=15,pady=8)
+
+    # Función para iniciar el Cliente
+    def iniciar_cliente(self):
+        text_message = self.mensaje_enviar.get()
+        if text_message == None or text_message == "":
+            messagebox.showinfo("ATENCIÓN!!", "Escribir un mensaje para enviar")
+
+        if self.combo_direccionesip.get() == "":
+            messagebox.showinfo("ATENCIÓN!!!", "Seleccionar una Dirección IP")
+            return
+        
+        # Inicia el hilo para el cliente
+        server_thread = threading.Thread(target=self.conectar_cliente)
+        if self.inicio_comunicacion["text"] == "CONEXION":
+            self.stop_thread = True
+            server_thread.start()
+            self.inicio_comunicacion.configure(text="Detener")
+        else:
+            self.inicio_comunicacion.configure(text="CONEXION")
+            self.stop_thread = False
+    
+
+    # Función para parar el hilo y cerrar la ventana principal del programa
+    def stop_server_thread(self):
+        self.stop_thread = False
+        ventana_principal.destroy()
+        exit()
+
+   
+    def conectar_cliente(self):
+        text_message = self.mensaje_enviar.get()
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((self.HOST, self.PORT))
+            s.sendall(bytes(text_message, encoding = "utf-8"))
+            data = s.recv(1024)
+
+            print("Recibida", repr(data))
+            message = data.decode()
+            self.pantalla_mensaje_enviado.config(text=message)
+
+    
+   
+        
+
+if _name_ == "_main_":
+    # Se crea la ventana principal
+    ventana_principal = tk.Tk()
+    ventana_principal.title("Comunicación Cliente-Servidor")
+  
+    # Se crea un objeto de la clase Comunicacion_Socket y se agrega a la ventana principal
+    comunicacion = Comunicacion_Socket(ventana_principal)
+    comunicacion.pack(side="right", fill="both", expand="false")
+
+    # Se llama a la función protocol para cierre de la ventana y para detener el hilo
+    ventana_principal.protocol("WM_DELETE_WINDOW", comunicacion.stop_server_thread)
+    
+    # Se inicia la ventana principal
+    ventana_principal.mainloop()
